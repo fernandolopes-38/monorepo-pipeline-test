@@ -40,7 +40,7 @@ export default function Home() {
         </ol>
 
         <div className={styles.ctas}>
-          <Button>Testing...</Button>
+          <Button variant="destructive">Testing...</Button>
         </div>
       </main>
       <footer className={styles.footer}>
