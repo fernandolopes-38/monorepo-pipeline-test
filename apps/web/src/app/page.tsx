@@ -1,6 +1,8 @@
+"use client"
 import Image, { type ImageProps } from "next/image";
 import styles from "./page.module.css";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;
@@ -19,6 +21,7 @@ const ThemeImage = (props: Props) => {
 };
 
 export default function Home() {
+  const [state, setState] = useState(false);
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -36,11 +39,11 @@ export default function Home() {
             Get started by editing <code>apps/web/app/page.tsx</code>
           </li>
           <li>Save and see your changes instantly.</li>
-          <li>ENV: {process.env.ENVIROMENT}</li>
+          <li>ENV: {process.env.NEXT_PUBLIC_ENVIROMENT}</li>
         </ol>
 
         <div className={styles.ctas}>
-          <Button variant="destructive">Testing...</Button>
+          <Button variant="destructive" onClick={() => setState((currentState) => !currentState)}>{state ? "Sim" : "Não"}</Button>
         </div>
       </main>
       <footer className={styles.footer}>
