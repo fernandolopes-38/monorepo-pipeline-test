@@ -37,6 +37,7 @@ export default function Home() {
           </li>
           <li>Save and see your changes instantly.</li>
           <li>Testando deploy automático</li>
+          <li>Agora VAi!!</li>
           <li>ENV: {process.env.NEXT_PUBLIC_ENVIROMENT}!!!</li>
         </ol>
 
