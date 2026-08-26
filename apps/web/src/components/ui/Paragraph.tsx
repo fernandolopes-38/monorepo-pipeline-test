@@ -6,6 +6,6 @@ interface ParagraphProps extends HTMLAttributes<HTMLParagraphElement>{
 
 export const Paragraph: React.FC<ParagraphProps> = ({children, ...props}) => {
     return (
-        <p {...props}>{children}</p>
+        <p style={{ color: "green"}} {...props}>{children}</p>
     )
 }
