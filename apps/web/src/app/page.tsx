@@ -3,6 +3,7 @@ import Image, { type ImageProps } from "next/image";
 import styles from "./page.module.css";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { Paragraph } from "@/components/ui/Paragraph";
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;
@@ -25,10 +26,9 @@ export default function Home() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <ThemeImage
+        <Image
           className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
+          src="https://www-sta.deco.proteste.pt/-/media/edideco/images/configuration/mobileportal/headerconfigurationv2/logo-decoproteste-saber-e-poder-2025.svg?rev=66acd87a-1fae-41fb-80a0-0be7bf5abf59&la=pt-PT&h=66&mw=300&w=300&hash=2158BF292FAA002EBFBFD6AD17EF092C"
           alt="Turborepo logo"
           width={180}
           height={38}
@@ -42,7 +42,7 @@ export default function Home() {
         </ol>
 
         <div className={styles.ctas}>
-          <p>TOGGLE state</p>
+          <Paragraph>TOGGLE state</Paragraph>
           <Button variant="destructive" onClick={() => setState((currentState) => !currentState)}>{state ? "Sim" : "Não"}</Button>
         </div>
       </main>
