@@ -1,0 +1,102 @@
+name: Preview Deploy
+
+# Requer: .vercel/repo.json versionado na raiz do repo (não fica no .gitignore),
+# gerado por `vercel link` no modo repo/monorepo. Cada projeto novo = uma linha
+# nova nesse arquivo. Nenhum app é hardcoded neste workflow.
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # histórico completo, necessário pro turbo comparar com a base
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detecta apps afetados (turbo query affected ∩ .vercel/repo.json)
+        id: detect
+        run: |
+          # No contexto de pull_request, o turbo detecta a base automaticamente
+          # via GITHUB_BASE_REF, então não precisamos passar --base aqui.
+          RESULT=$(pnpm turbo query affected)
+          AFFECTED_PATHS=$(echo "$RESULT" | jq -c '[.data.affectedPackages.items[].path]')
+          echo "Pacotes afetados: $AFFECTED_PATHS"
+
+          # Cruza os pacotes afetados com os projetos Vercel conhecidos no repo.json.
+          # Só entra na matriz quem está nos dois: mudou E tem projeto Vercel linkado.
+          MATRIX=$(jq -c --argjson affected "$AFFECTED_PATHS" \
+            '[.projects[] | select(.directory as $d | ($affected | index($d)) != null)]' \
+            .vercel/repo.json)
+          echo "Apps a fazer deploy: $MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.matrix) }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # As três chamadas abaixo usam --cwd apontando pro diretório do app.
+      # A Vercel CLI resolve org/projeto automaticamente lendo .vercel/repo.json
+      # na raiz — não precisamos de VERCEL_ORG_ID nem VERCEL_PROJECT_ID como secret.
+      - name: Puxa config do projeto (ambiente preview)
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }}
+
+      - name: Build (via turbo, com cache remota se TURBO_TOKEN estiver setado)
+        run: npx vercel build --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }}
+
+      - name: Deploy prebuilt (preview)
+        id: deploy
+        run: |
+          URL=$(npx vercel deploy --prebuilt --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }})
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comenta a URL de preview no PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔗 Preview de **${{ matrix.app.name }}**: ${{ steps.deploy.outputs.url }}`
+            })

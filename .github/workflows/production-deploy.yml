@@ -1,0 +1,92 @@
+name: Production Deploy
+
+# Requer: .vercel/repo.json versionado na raiz do repo (não fica no .gitignore),
+# gerado por `vercel link` no modo repo/monorepo. Cada projeto novo = uma linha
+# nova nesse arquivo. Nenhum app é hardcoded neste workflow.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false # nunca cancela um deploy de produção no meio
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detecta apps afetados (turbo query affected ∩ .vercel/repo.json)
+        id: detect
+        run: |
+          # Em push (não é PR), o turbo não tem uma "base" óbvia pra comparar,
+          # então usamos o SHA anterior ao push (github.event.before).
+          # Fallback pra HEAD^1 no caso raro de ser o primeiro push da branch.
+          BEFORE_SHA="${{ github.event.before }}"
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="HEAD^1"
+          else
+            BASE_REF="$BEFORE_SHA"
+          fi
+
+          RESULT=$(pnpm turbo query affected --base="$BASE_REF")
+          AFFECTED_PATHS=$(echo "$RESULT" | jq -c '[.data.affectedPackages.items[].path]')
+          echo "Pacotes afetados desde $BASE_REF: $AFFECTED_PATHS"
+
+          MATRIX=$(jq -c --argjson affected "$AFFECTED_PATHS" \
+            '[.projects[] | select(.directory as $d | ($affected | index($d)) != null)]' \
+            .vercel/repo.json)
+          echo "Apps a fazer deploy: $MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.matrix) }}
+      max-parallel: 1 # deploys de produção um por vez
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Puxa config do projeto (ambiente production)
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }}
+
+      - name: Build de produção
+        run: npx vercel build --prod --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }}
+
+      - name: Deploy prebuilt (produção)
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN --cwd ${{ matrix.app.directory }}

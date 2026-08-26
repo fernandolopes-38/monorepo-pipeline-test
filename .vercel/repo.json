@@ -1,0 +1,17 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_CJvLDwRnO9SOAG7vCza3gV1bKu18",
+      "name": "monorepo-pipeline-test-docs",
+      "directory": "apps/docs",
+      "orgId": "team_Paq9NduOytWinoN81C5DSDuV"
+    },
+    {
+      "id": "prj_MYm9SDFtMNmlaWa8KF6Ggp9kr9PT",
+      "name":"monorepo-pipeline-test-web",
+      "directory": "apps/web",
+      "orgId":"team_Paq9NduOytWinoN81C5DSDuV"
+    }
+  ]
+}
