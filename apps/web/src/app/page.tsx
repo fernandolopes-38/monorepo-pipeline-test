@@ -3,6 +3,7 @@ import Image, { type ImageProps } from "next/image";
 import styles from "./page.module.css";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { Paragraph } from "@/components/ui/Paragraph";
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;
@@ -42,7 +43,7 @@ export default function Home() {
         </ol>
 
         <div className={styles.ctas}>
-          <p>TOGGLE state</p>
+          <Paragraph>TOGGLE state</Paragraph>
           <Button variant="destructive" onClick={() => setState((currentState) => !currentState)}>{state ? "Sim" : "Não"}</Button>
         </div>
       </main>
