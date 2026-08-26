@@ -49,6 +49,16 @@ jobs:
           fi
           echo "Base usada para comparação: $BASE_REF"
 
+          echo "--- git diff --name-only entre $BASE_REF e HEAD ---"
+          git diff --name-only "$BASE_REF" HEAD || echo "(git diff falhou — veja se $BASE_REF existe no histórico)"
+          echo "-----------------------------------------------------"
+
+          echo "--- commits entre $BASE_REF e HEAD ---"
+          git log --oneline "$BASE_REF"..HEAD || echo "(git log falhou)"
+          echo "HEAD resolvido para: $(git rev-parse HEAD)"
+          echo "BASE_REF resolvido para: $(git rev-parse "$BASE_REF" 2>&1)"
+          echo "-----------------------------------------"
+
           # stderr vai pra um arquivo à parte só pra debug — NUNCA misturado
           # com $RESULT, porque avisos/telemetria ali dentro quebrariam o jq.
           set +e
