@@ -42,7 +42,7 @@ export default function Home() {
         </ol>
 
         <div className={styles.ctas}>
-          <p>TOGGLE</p>
+          <p>TOGGLE state</p>
           <Button variant="destructive" onClick={() => setState((currentState) => !currentState)}>{state ? "Sim" : "Não"}</Button>
         </div>
       </main>
