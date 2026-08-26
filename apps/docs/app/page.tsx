@@ -36,7 +36,8 @@ export default function Home() {
             Get started by editing <code>apps/docs/app/page.tsx</code>
           </li>
           <li>Save and see your changes instantly.</li>
-          <li>ENV: {process.env.ENVIROMENT}!!!</li>
+          <li>Testando deploy automático</li>
+          <li>ENV: {process.env.NEXT_PUBLIC_ENVIROMENT}!!!</li>
         </ol>
 
         <div className={styles.ctas}>
