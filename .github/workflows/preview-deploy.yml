@@ -52,13 +52,34 @@ jobs:
 
       - name: Detect affected apps (turbo query affected ∩ .vercel/repo.json)
         id: detect
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -uo pipefail
 
-          # In a pull_request context, turbo auto-detects the base via
-          # GITHUB_BASE_REF, so we don't need to pass --base here.
+          # IMPORTANT: do NOT rely on turbo's automatic GITHUB_BASE_REF detection here.
+          # actions/checkout never creates a local branch named after the target
+          # branch (e.g. "main") — only a remote-tracking ref (origin/main) exists.
+          # Turbo tries to resolve the bare branch name, fails, and SILENTLY falls
+          # back to "assume everything changed" instead of erroring out. This is
+          # why a one-file change was reported as affecting the whole repo.
+          #
+          # Instead, resolve an explicit, always-valid base ourselves: the merge
+          # base (fork point) between the PR's target branch and HEAD. Using the
+          # merge base instead of the raw target-branch tip also avoids false
+          # positives from unrelated commits landing on the target branch after
+          # this branch diverged.
+          if ! git cat-file -e "$PR_BASE_SHA" 2>/dev/null; then
+            echo "::error::PR base SHA ($PR_BASE_SHA) not found in fetched history. Check that fetch-depth: 0 is set on checkout."
+            exit 1
+          fi
+
+          MERGE_BASE=$(git merge-base "$PR_BASE_SHA" HEAD)
+          echo "PR target base SHA: $PR_BASE_SHA"
+          echo "Merge base (fork point) used for comparison: $MERGE_BASE"
+
           set +e
-          RESULT=$(pnpm turbo query affected --packages 2>/tmp/turbo_stderr.log)
+          RESULT=$(pnpm turbo query affected --packages --base="$MERGE_BASE" 2>/tmp/turbo_stderr.log)
           TURBO_EXIT=$?
           set -e
 
@@ -71,6 +92,14 @@ jobs:
           if [ $TURBO_EXIT -ne 0 ]; then
             echo "::error::turbo query affected failed (exit code $TURBO_EXIT), see stderr above"
             exit $TURBO_EXIT
+          fi
+
+          # Safety net: if turbo ever falls back to "assume everything changed"
+          # again (e.g. base ref becomes unresolvable for some other reason),
+          # fail loudly here instead of silently deploying every app.
+          if grep -q "assuming all files have changed" /tmp/turbo_stderr.log; then
+            echo "::error::turbo could not resolve the base ref and fell back to treating all packages as affected. Refusing to deploy everything silently — see stderr above."
+            exit 1
           fi
 
           # The '?' after each key prevents jq from breaking with exit code 5
