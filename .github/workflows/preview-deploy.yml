@@ -38,7 +38,7 @@ jobs:
         run: |
           # No contexto de pull_request, o turbo detecta a base automaticamente
           # via GITHUB_BASE_REF, então não precisamos passar --base aqui.
-          RESULT=$(pnpm turbo query affected)
+          RESULT=$(pnpm turbo query affected --packages)
           AFFECTED_PATHS=$(echo "$RESULT" | jq -c '[.data.affectedPackages.items[].path]')
           echo "Pacotes afetados: $AFFECTED_PATHS"
 

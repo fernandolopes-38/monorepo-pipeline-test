@@ -62,7 +62,7 @@ jobs:
           # stderr vai pra um arquivo à parte só pra debug — NUNCA misturado
           # com $RESULT, porque avisos/telemetria ali dentro quebrariam o jq.
           set +e
-          RESULT=$(pnpm turbo query affected --base="$BASE_REF" 2>/tmp/turbo_stderr.log)
+          RESULT=$(pnpm turbo query affected --packages --base="$BASE_REF" 2>/tmp/turbo_stderr.log)
           TURBO_EXIT=$?
           set -e
 
