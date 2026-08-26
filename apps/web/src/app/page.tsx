@@ -2,6 +2,7 @@
 import Image, { type ImageProps } from "next/image";
 import styles from "./page.module.css";
 import { Button } from "@/components/ui/button";
+import { Button as ButtonUI } from "@repo/ui/button";
 import { useState } from "react";
 import { Paragraph } from "@/components/ui/Paragraph";
 
@@ -33,13 +34,11 @@ export default function Home() {
           width={180}
           height={38}
         />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>DEPLOY!!!!!!!!!!!!!!!!!!!</li>
-          <li>ENV: {process.env.NEXT_PUBLIC_ENVIROMENT}</li>
-        </ol>
+        
+        <section>
+          <h3>BOTÃO</h3>
+          <ButtonUI appName="web" className={styles.new}>DALE!</ButtonUI>
+        </section>
 
         <div className={styles.ctas}>
           <Paragraph>TOGGLE state</Paragraph>

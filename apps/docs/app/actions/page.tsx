@@ -1,5 +1,10 @@
+import { Button } from "@repo/ui/button";
+
 export default function ActionPage() {
     return (
-        <h1>Action page.</h1>
+        <main>
+            <h1>Action page.</h1>
+            <Button appName="docs">Testing</Button>
+        </main>
     )
 }

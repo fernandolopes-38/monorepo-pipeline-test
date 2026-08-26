@@ -184,3 +184,15 @@ button.secondary {
     filter: invert();
   }
 }
+
+button.new {
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  border: 1px dashed blue;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: aquamarine;
+  }
+}
