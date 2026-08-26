@@ -38,7 +38,7 @@ export default function Home() {
           <li>
             Get started by editing <code>apps/web/app/page.tsx</code>
           </li>
-          <li>DEPLOY!!!!!!!!!!!!!!!!!</li>
+          <li>DEPLOY!!!!!!!!!!!!!!!!!!!</li>
           <li>ENV: {process.env.NEXT_PUBLIC_ENVIROMENT}</li>
         </ol>
 
