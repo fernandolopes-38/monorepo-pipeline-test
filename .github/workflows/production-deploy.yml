@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
+    env:
+      TURBO_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,14 +42,34 @@ jobs:
           # então usamos o SHA anterior ao push (github.event.before).
           # Fallback pra HEAD^1 no caso raro de ser o primeiro push da branch.
           BEFORE_SHA="${{ github.event.before }}"
-          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BASE_REF="HEAD^1"
           else
             BASE_REF="$BEFORE_SHA"
           fi
+          echo "Base usada para comparação: $BASE_REF"
 
-          RESULT=$(pnpm turbo query affected --base="$BASE_REF")
-          AFFECTED_PATHS=$(echo "$RESULT" | jq -c '[.data.affectedPackages.items[].path]')
+          # stderr vai pra um arquivo à parte só pra debug — NUNCA misturado
+          # com $RESULT, porque avisos/telemetria ali dentro quebrariam o jq.
+          set +e
+          RESULT=$(pnpm turbo query affected --base="$BASE_REF" 2>/tmp/turbo_stderr.log)
+          TURBO_EXIT=$?
+          set -e
+
+          if [ -s /tmp/turbo_stderr.log ]; then
+            echo "--- stderr do turbo (avisos/erros, não afeta o parse) ---"
+            cat /tmp/turbo_stderr.log
+            echo "----------------------------------------------------------"
+          fi
+
+          if [ $TURBO_EXIT -ne 0 ]; then
+            echo "::error::turbo query affected falhou (código $TURBO_EXIT) — veja o stderr acima"
+            exit $TURBO_EXIT
+          fi
+
+          # O '?' depois de cada chave evita que o jq quebre com exit code 5
+          # caso a resposta não tenha o formato esperado (ex.: data == null).
+          AFFECTED_PATHS=$(echo "$RESULT" | jq -c '[.data.affectedPackages.items[]?.path]')
           echo "Pacotes afetados desde $BASE_REF: $AFFECTED_PATHS"
 
           MATRIX=$(jq -c --argjson affected "$AFFECTED_PATHS" \
@@ -67,7 +89,8 @@ jobs:
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      TURBO_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
 
